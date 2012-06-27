@@ -1,0 +1,83 @@
+<?php
+
+/**
+ * @file
+ * Database schema for tracking Flickr photos downloaded into Drupal nodes.
+ */
+
+/**
+ * Implementation of hook_install().
+ */
+function flickrsync_install() {
+  drupal_install_schema('flickrsync');
+}
+
+/**
+ * Implementation of hook_uninstall().
+ */
+function flickrsync_uninstall() {
+  drupal_uninstall_schema('flickrsync');
+}
+
+/**
+ * Implementation of hook_schema().
+ */
+function flickrsync_schema() {
+  $schema['flickrsync_users'] = array(
+    'description' => t('Connects users with their Flickr accounts.'),
+    'fields' => array(
+      'uid' => array(
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE),
+      'nsid' => array(
+        'type' => 'varchar',
+        'length' => 64,
+        'not null' => TRUE),
+      'identifier' => array(
+        'type' => 'varchar',
+        'length' => 64,
+        'not null' => TRUE),
+      'start_date' => array(
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => FALSE),
+      'tags' => array(
+        'type' => 'text',
+        'not null' => FALSE),
+    ),
+    'indexes' => array(
+      'nsid'    => array('nsid')
+    ),
+    'primary key' => array('uid'),
+  );
+
+  $schema['flickrsync_photos'] = array(
+    'description' => t('Track Flickr photos to node relationships.'),
+    'fields' => array(
+      'flickrphoto_id' => array(
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'size' => 'big'),
+      'nid' => array(
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE),
+      'upload_date' => array(
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => FALSE),
+      'taken_date' => array(
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => FALSE),
+    ),
+    'indexes' => array(
+      'nid'    => array('nid')
+    ),
+    'primary key' => array('flickrphoto_id'),
+  );
+
+  return $schema;
+}
