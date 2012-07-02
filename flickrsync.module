@@ -345,6 +345,12 @@ function flickrsync_node_save($photo_id, $update_nodes = FALSE) {
   // info to put into the node
   $flickr_photo = $f->photos_getInfo($photo_id);
   
+  if ($flickr_photo['title']) {
+    $photo_title = htmlentities($flickr_photo['title']);
+  } else {
+    $photo_title = $photo_id;
+  }
+  
   if (!$flickr_photo) {
     drupal_set_message(t("Unable to access Flickr"), 'error');
     return FALSE;
@@ -376,16 +382,18 @@ function flickrsync_node_save($photo_id, $update_nodes = FALSE) {
   // image field
   $imagefield = variable_get('flickrsync_image_field', '');
   if ($imagefield) {
-    // remove old files
-    foreach ($node->{$imagefield} as $image_file) {
-      $file_delete = field_file_load($image_file['fid']);
-      field_file_delete($file_delete);  
+    // remove old files if update
+    if ($update_nodes) {
+      foreach ($node->{$imagefield} as $image_file) {
+        $file_delete = field_file_load($image_file['fid']);
+        field_file_delete($file_delete);  
+      }
     }
     unset($node->{$imagefield});
     $cck = content_types(variable_get('flickrsync_node_type', ''));
 
     $file['list'] = $cck['fields'][$imagefield]['list_default'];
-    $file['data']['alt'] = $cck['fields'][$imagefield]['widget']['alt'];
+    $file['data']['alt'] = $photo_title;
     $file['data']['title'] = $cck['fields'][$imagefield]['widget']['title'];
     $file['data']['description'] = $cck['fields'][$imagefield]['widget']['description'];    
     unset($file['source']);
@@ -395,45 +403,61 @@ function flickrsync_node_save($photo_id, $update_nodes = FALSE) {
   else {
     drupal_set_message(t("Image field not configured in Flickr sync settings"), 'error');
   }
+  
+  $textfield = variable_get('flickrsync_text_field', 'body');
+	if ($textfield == 'body') {
+    $node->body = $content;
+  } else {
+    $node->{$textfield}[0]['value'] = $content;
+  }
 
-  // tags
+	// tags
   $flickr_tags = $flickr_photo['tags']['tag'];
   $tags = array();
-  // Test to save cck taxonomy also 
-  //$cck_taxo = array();
-  
+  $flickrsync_content_taxonomy = variable_get('flickrsync_content_taxonomy', '');
   $vid = variable_get('flickrsync_vocab', '');
-  if ($vid) {
-    foreach ($flickr_tags as $tag) {
-      // Test to save cck taxonomy also 
-      //$cck_taxo[]['value'] = 
-      $tags[] = $tag['raw'];    
+  if ($flickrsync_content_taxonomy != 'default') {
+    $node_terms = ($node->{$flickrsync_content_taxonomy} ? $node->{$flickrsync_content_taxonomy} : array());
+    if ($vid) {
+      foreach ($flickr_tags as $tag) {
+        $term = taxonomy_get_term_by_name($tag['raw']);
+        if (!$term) {
+          $tt = array(
+            'name' => $tag['raw'],
+            'vid' => $vid,
+					);
+          taxonomy_save_term($tt);
+          $_term = taxonomy_get_term_by_name($tag['raw']);
+					$node_terms[]['value'] = $_term[0]->tid;
+          } elseif (!in_array(array('value' => $term[0]->tid), $node_terms, TRUE)) {
+          $node_terms[]['value'] = $term[0]->tid;
+        }
+      }
+      $node->{$flickrsync_content_taxonomy} = $node_terms;
     }
-    $node->taxonomy = array(
-      'tags' => array(
-        $vid => implode(',', $tags)
-      )
-    );
+	}else{
+    $node_terms = ($node->taxonomy ? $node->taxonomy : array());
+    if ($vid){
+      foreach ($node_terms as $term) {
+        $tags[] = $term->name;
+      }
+      foreach ($flickr_tags as $term) {
+        if (!in_array($term['raw'], $tags)) $tags[] = $term['raw'];
+      }
+			$node->taxonomy = array(
+        'tags' => array(
+          $vid => implode(',', $tags)
+        )
+      );
+    }
   }
 
-  // Do not create node without title.
-  if ($flickr_photo['title']) {
-    // patched as http://drupal.org/node/367398
-    $photo_title = $flickr_photo['title'];
-  }
-  else {
-    $photo_title = $photo_id;
-  }
   
   $node->title = $photo_title;
   $node->created = strtotime($flickr_photo['dates']['taken']);
-  $node->teaser = $content;
+	//$node->teaser = $content;
   $node->format = variable_get('filter_default_format', '');
-  $node->body = $content;
-  
-  // test to save node cck test also
-  $node->field_image_caption[0]['value'] = $content;
-  
+	//$node->body = $content;
   $node->name = $user->name;
   $node->uid = $user->uid;
   $node->type = variable_get('flickrsync_node_type', '');
