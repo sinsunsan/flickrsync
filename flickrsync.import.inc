@@ -48,8 +48,8 @@ function flickrsync_init_header() {
     array(
       'flickrsync' => array(
         'url' => array(
-          'finished' => url('admi/flickr/import', array('query' => 'op=finished')),
-          'do_import' => url('admi/flickr/import', array('query' => 'op=do_import_js'))
+          'finished' => url('admin/settings/flickrsync/import', array('query' => 'op=finished')),
+          'do_import' => url('admin/settings/flickrsync/import', array('query' => 'op=do_import_js'))
         )
       )
     ), 'setting'
@@ -72,7 +72,6 @@ function flickrsync_import_start_page() {
 
   // add JS and CSS
   flickrsync_init_header();
-
 
   // get user's start date
   $posted_after = '';
@@ -114,7 +113,7 @@ function flickrsync_import_start_page() {
       $output[] = flickrsync_import_progress_page_js();
     }
     else {
-      drupal_goto('admi/flickr/import', 'op=do_import_nojs');
+      drupal_goto('admin/settings/flickrsync/import', 'op=do_import_nojs');
     }
   }
   else {
@@ -175,11 +174,11 @@ function flickrsync_import_progress_page_nojs() {
     $message = 'Starting updates';
   }
 
-  drupal_set_html_head('<meta http-equiv="Refresh" content="0; URL='. url('admi/flickr/import', 'op='. $new_op) .'">');
+  drupal_set_html_head('<meta http-equiv="Refresh" content="0; URL='. url('admin/settings/flickrsync/import', 'op='. $new_op) .'">');
   $output  = '<div id="flickrsync-import">';
   $output .= theme('progress_bar', $percentage, $message);
   $msg = t('Importing your images may take awhile.  You can !stop-the-import at anytime and resume later.',
-            array('!stop-the-import' => l('stop the import', 'admi/flickr/import')));
+            array('!stop-the-import' => l('stop the import', 'admin/settings/flickrsync/import')));
   $output .= '<p id="flickrsync-stop-msg">'. $msg .'</p>';
   $output .= '</div>';
 

@@ -26,69 +26,44 @@ function flickrsync_admin_settings() {
     //$fields = content_fields(NULL, $type); // doesn't seem to work as expected
     $info = _content_type_info();
     $fields = $info['content types'][$type]['fields'];
-    $choices = array(
-      'text' => array('body' => 'Body'),
-      'content_taxonomy' => array('default' => '- Default -')
-    );    
+
+    $choices = array();
     foreach ($fields as $name => $field) {
-      $module = $field['widget']['module'];
-      if ($module == 'imagefield' || $module == 'text') {
-        $choices[$module][$name] = $field['widget']['label'];
-      } elseif (substr($module, 0, 16) == 'content_taxonomy') {
-        $choices['content_taxonomy'][$name] = $field['widget']['label'];
-      }			
-    }
-if ($choices['imagefield']) {
-			$form['flickrsync_image_field'] = array(
-        '#type' => 'select',
-        '#title' => t('Image field for attaching Flickr photo'),
-    		'#default_value' => variable_get('flickrsync_image_field', ''),
-        '#options' => $choices['imagefield'],
-        '#description' => t('Select the image field to use for attaching Flickr images to Drupal nodes.'),
-      );
-		} else {
-			drupal_set_message("The node type selected doesn't have any text fields.  Please select a different node type, or add an text field to this node type.", 'error');
-		}
-		if ($choices['text']) {
-			$form['flickrsync_text_field'] = array(
-				'#type' => 'select',
-				'#title' => t('Text field for attaching Flickr Description'),
-				'#default_value' => variable_get('flickrsync_text_field', ''),
-				'#options' => $choices['text'],
-				'#description' => t('Select the text field to use for attaching Flickr text to Drupal nodes.'),
-			);
-		} else {
-			drupal_set_message("The node type selected doesn't have any text fields.  Please select a different node type, or add an text field to this node type.", 'error');
-		}
-		if ($choices['content_taxonomy']) {
-			$form['flickrsync_content_taxonomy'] = array(
-				'#type' => 'select',
-				'#title' => t('Taxonomy field for attaching Tags Description'),
-				'#default_value' => variable_get('flickrsync_content_taxonomy', ''),
-				'#options' => $choices['content_taxonomy'],
-				'#description' => t('Select the taxonomy field to use for attaching Flickr tags to Drupal nodes.'),
-			);
-		} else {
-			drupal_set_message("The node type selected doesn't have any taxonomy fields.  Please select a different node type, or add an taxonomy field to this node type.", 'error');
-		}
-    $vocabs = taxonomy_get_vocabularies($type);
-    $choices['image'] = array();
-    foreach ($vocabs as $vocab) {
-			// is free tagging enabled?
-      if ($vocab->tags == 1) {
-         $choices['image'][$vocab->vid] = $vocab->name;
+      if ($field['widget']['module'] == 'imagefield') {
+        $choices[$name] = $field['widget']['label'];
       }
     }
-    if ($choices['image']) {
+    if ($choices) {
+      $form['flickrsync_image_field'] = array(
+        '#type' => 'select',
+        '#title' => t('Image field for attaching Flickr photo'),
+        '#default_value' => variable_get('flickrsync_image_field', ''),
+        '#options' => $choices,
+        '#description' => t('Select the image field to use for attaching Flickr images to Drupal nodes.'),
+      );
+    }
+    else {
+      drupal_set_message("The node type selected doesn't have any image fields.  Please select a different node type, or add an image field to this node type.", 'error');
+    }
+
+    $vocabs = taxonomy_get_vocabularies($type);
+    $choices = array();
+    foreach ($vocabs as $vocab) {
+      // is free tagging enabled?
+      if ($vocab->tags == 1) {
+        $choices[$vocab->vid] = $vocab->name;
+      }
+    }
+    if ($choices) {
       $form['flickrsync_vocab'] = array(
         '#type' => 'select',
         '#title' => t('Vocabulary for importing Flickr tags'),
         '#default_value' => variable_get('flickrsync_vocab', ''),
-        '#options' => $choices['image'],
+        '#options' => $choices,
         '#description' => t('Select a free-tagging vocabulary to use for importing Flickr tags.'),
       );
-      
-    } else {
+    }
+    else {
       drupal_set_message("The node type selected doesn't have a free tagging vocabulary.
         This is optional, but you want want to consider configuring a vocabulary so that Flickr tags
         can be imported.");
@@ -105,6 +80,6 @@ if ($choices['imagefield']) {
     '#title' => t('Maximum number of Flickr images to import during each cron run'),
     '#default_value' => variable_get('flickrsync_cron_number', 10),
     '#description' => t('Use a low number to avoid PHP timing out during cron, especially if other intensive cron tasks are also running.  Keep in mind that you may need to run cron frequently if lots of Flickr photos need to be imported.'),
-	);
+  );
   return system_settings_form($form);
 }
