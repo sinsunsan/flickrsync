@@ -31,8 +31,7 @@ function flickrsync_menu() {
     'description' => 'Configure settings for syncing Flickr images.',
     'type' => MENU_DEFAULT_LOCAL_TASK
   ); 
-  $items['admi/flickr/import'] = array(
-  //$items['admin/settings/flickrsync/import'] = array(
+  $items['admin/settings/flickrsync/import'] = array(
     'title' => 'Import from Flickr',
     'page callback' => 'flickrsync_import',
     'access arguments' => array('import from flickr'),
@@ -49,11 +48,9 @@ function flickrsync_menu() {
     'access arguments' => array(1),
     'type' => MENU_LOCAL_TASK,
   );
-  
-  
+
   return $items;
 }
-
 
 /**
  * Implementation of hook_perm().
@@ -82,11 +79,6 @@ function flickrsync_user($op, &$edit, &$account, $category = NULL) {
     case 'form':
       if ($category == 'account') {
         $user = user_load(array('uid' => $account->uid));
-         // Patch to allow only authorized people to download from flickr
-          // http://drupal.org/files/1401562-d6-backport-user-admin-permissions-1.patch
-          if (!user_access('import from flickr')) {
-            return;
-          }
         $form['flickrsync'] = array(
           '#type' => 'fieldset',
           '#title' => t('Flickr sync settings'),
@@ -104,7 +96,6 @@ function flickrsync_user($op, &$edit, &$account, $category = NULL) {
         $form['flickrsync']['flickrsync_start_date'] = array(
           '#type' => 'textfield',
           '#title' => t('Date of first Flickr photo to import'),
-          // Following comment patched
           '#default_value' => ($start_date = $user->flickrsync['start_date']) ? date('c', $start_date) : '',
           '#description' => t('Enter the posted date (in any standard date format) of the first Flickr image you want to import.  Leave blank to import all your Flickr images.'),
         );
@@ -296,7 +287,6 @@ function flickrsync_create_node($photo_id) {
       $values = db_fetch_array($result);
 
       // update start_date in user's settings
-      // Patch Don't update start date what for ?
       db_query("UPDATE {flickrsync_users} SET start_date=%d WHERE uid=%d", $values['upload_date'], $values['uid']);
       break;
   }
@@ -318,8 +308,7 @@ function flickrsync_node_save($photo_id, $update_nodes = FALSE) {
     drupal_set_message(t("Photo ID required"));
     return FALSE;
   }
-  // If the the image has been already downloaded
-  // We don't create another node but load it and update it
+
   if ($nid = flickrsync_get_nid($photo_id)) {
     if ($update_nodes !== TRUE) {
       return array(
@@ -329,11 +318,9 @@ function flickrsync_node_save($photo_id, $update_nodes = FALSE) {
       );
     }
     $node = node_load($nid);
-    $newnode = FALSE;
   }
   else {
     $node = new stdClass();
-    $newnode = TRUE;
   }
 
   $f = flickrapi_phpFlickr();
@@ -344,12 +331,6 @@ function flickrsync_node_save($photo_id, $update_nodes = FALSE) {
 
   // info to put into the node
   $flickr_photo = $f->photos_getInfo($photo_id);
-  
-  if ($flickr_photo['title']) {
-    $photo_title = htmlentities($flickr_photo['title']);
-  } else {
-    $photo_title = $photo_id;
-  }
   
   if (!$flickr_photo) {
     drupal_set_message(t("Unable to access Flickr"), 'error');
@@ -375,25 +356,22 @@ function flickrsync_node_save($photo_id, $update_nodes = FALSE) {
 
   $content = '';
   if ($flickr_photo['description']) {
-    // Patched as http://drupal.org/node/367398
-    $content .= $flickr_photo['description'];
+    $content .= '<p>'. htmlentities(html_entity_decode($flickr_photo['description'])) .'</p>';
   }
 
   // image field
   $imagefield = variable_get('flickrsync_image_field', '');
   if ($imagefield) {
-    // remove old files if update
-    if ($update_nodes) {
-      foreach ($node->{$imagefield} as $image_file) {
-        $file_delete = field_file_load($image_file['fid']);
-        field_file_delete($file_delete);  
-      }
+    // remove old files
+    foreach ($node->{$imagefield} as $image_file) {
+      $file_delete = field_file_load($image_file['fid']);
+      field_file_delete($file_delete);  
     }
     unset($node->{$imagefield});
     $cck = content_types(variable_get('flickrsync_node_type', ''));
 
     $file['list'] = $cck['fields'][$imagefield]['list_default'];
-    $file['data']['alt'] = $photo_title;
+    $file['data']['alt'] = $cck['fields'][$imagefield]['widget']['alt'];
     $file['data']['title'] = $cck['fields'][$imagefield]['widget']['title'];
     $file['data']['description'] = $cck['fields'][$imagefield]['widget']['description'];    
     unset($file['source']);
@@ -403,74 +381,47 @@ function flickrsync_node_save($photo_id, $update_nodes = FALSE) {
   else {
     drupal_set_message(t("Image field not configured in Flickr sync settings"), 'error');
   }
-  
-  $textfield = variable_get('flickrsync_text_field', 'body');
-	if ($textfield == 'body') {
-    $node->body = $content;
-  } else {
-    $node->{$textfield}[0]['value'] = $content;
-  }
 
-	// tags
+  // tags
   $flickr_tags = $flickr_photo['tags']['tag'];
   $tags = array();
-  $flickrsync_content_taxonomy = variable_get('flickrsync_content_taxonomy', '');
   $vid = variable_get('flickrsync_vocab', '');
-  if ($flickrsync_content_taxonomy != 'default') {
-    $node_terms = ($node->{$flickrsync_content_taxonomy} ? $node->{$flickrsync_content_taxonomy} : array());
-    if ($vid) {
-      foreach ($flickr_tags as $tag) {
-        $term = taxonomy_get_term_by_name($tag['raw']);
-        if (!$term) {
-          $tt = array(
-            'name' => $tag['raw'],
-            'vid' => $vid,
-					);
-          taxonomy_save_term($tt);
-          $_term = taxonomy_get_term_by_name($tag['raw']);
-					$node_terms[]['value'] = $_term[0]->tid;
-          } elseif (!in_array(array('value' => $term[0]->tid), $node_terms, TRUE)) {
-          $node_terms[]['value'] = $term[0]->tid;
-        }
-      }
-      $node->{$flickrsync_content_taxonomy} = $node_terms;
+  if ($vid) {
+    foreach ($flickr_tags as $tag) {
+      $tags[] = $tag['raw'];
     }
-	}else{
-    $node_terms = ($node->taxonomy ? $node->taxonomy : array());
-    if ($vid){
-      foreach ($node_terms as $term) {
-        $tags[] = $term->name;
-      }
-      foreach ($flickr_tags as $term) {
-        if (!in_array($term['raw'], $tags)) $tags[] = $term['raw'];
-      }
-			$node->taxonomy = array(
-        'tags' => array(
+    $node->taxonomy = array(
+      'tags' => array(
           $vid => implode(',', $tags)
         )
-      );
-    }
+    );
   }
 
+  // Do not create node without title.
+  if ($flickr_photo['title']) {
+    $photo_title = htmlentities($flickr_photo['title']);
+  }
+  else {
+    $photo_title = $photo_id;
+  }
   
   $node->title = $photo_title;
   $node->created = strtotime($flickr_photo['dates']['taken']);
-	//$node->teaser = $content;
+  $node->teaser = $content;
   $node->format = variable_get('filter_default_format', '');
-	//$node->body = $content;
+  $node->body = $content;
   $node->name = $user->name;
   $node->uid = $user->uid;
   $node->type = variable_get('flickrsync_node_type', '');
   $node->published = 1;
   $node->status = 1;
   node_save($node);
-  
-  if ($newnode){
-  //if ($node->is_new) {
+
+  if ($node->is_new) {
     $result = db_query("INSERT INTO {flickrsync_photos} (flickrphoto_id, nid, upload_date, taken_date)
                         VALUES (%s, %d, %d, %d)",
                         $photo_id, $node->nid, $flickr_photo['dates']['posted'], strtotime($flickr_photo['dates']['taken']));
-    drupal_set_message(t("New image created, !title", array('!title' =>  l($flickr_photo['title'], 'node/'. $node->nid))));
+    drupal_set_message(t("New image created, !title", array('!title' =>  l($node->title, 'node/'. $node->nid))));
   }
   else {
     drupal_set_message(t("Updated image %photo_id, ". l($node->title, 'node/'. $node->nid), array('%photo_id' => $photo_id)));
