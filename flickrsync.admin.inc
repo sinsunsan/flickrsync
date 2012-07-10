@@ -28,17 +28,19 @@ function flickrsync_admin_settings() {
     $fields = $info['content types'][$type]['fields'];
     $choices = array(
       'text' => array('body' => 'Body'),
-      'content_taxonomy' => array('default' => '- Default -')
-    );    
+      'content_taxonomy' => array('default' => '<none>'),
+			'date' => array('created' => '<none>')
+    );
     foreach ($fields as $name => $field) {
       $module = $field['widget']['module'];
-      if ($module == 'imagefield' || $module == 'text') {
+      if (in_array($module, array('imagefield', 'text', 'openlayers_cck', 'date'))) {
         $choices[$module][$name] = $field['widget']['label'];
       } elseif (substr($module, 0, 16) == 'content_taxonomy') {
         $choices['content_taxonomy'][$name] = $field['widget']['label'];
       }			
     }
-if ($choices['imagefield']) {
+		
+		if ($choices['imagefield']) {
 			$form['flickrsync_image_field'] = array(
         '#type' => 'select',
         '#title' => t('Image field for attaching Flickr photo'),
@@ -70,6 +72,26 @@ if ($choices['imagefield']) {
 			);
 		} else {
 			drupal_set_message("The node type selected doesn't have any taxonomy fields.  Please select a different node type, or add an taxonomy field to this node type.", 'error');
+		}
+
+		if ($choices['openlayers_cck']) {
+			$form['flickrsync_openlayers_cck'] = array(
+				'#type' => 'select',
+				'#title' => t('Text field for attaching Geo Data '),
+				'#default_value' => variable_get('flickrsync_openlayers_cck', ''),
+				'#options' => $choices['openlayers_cck'],
+				'#description' => t('Select the taxonomy field to use for attaching Flickr Geo Data to Drupal nodes.'),
+			);
+		}
+
+		if ($choices['date']) {
+			$form['flickrsync_date'] = array(
+				'#type' => 'select',
+				'#title' => t('Text field for attaching Date '),
+				'#default_value' => variable_get('flickrsync_date', ''),
+				'#options' => $choices['date'],
+				'#description' => t('Select the taxonomy field to use for attaching Flickr date to Drupal nodes.'),
+			);
 		}
     $vocabs = taxonomy_get_vocabularies($type);
     $choices['image'] = array();

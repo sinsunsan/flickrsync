@@ -67,7 +67,8 @@ function flickrsync_perm() {
 */
 function flickrupdate_tab_access($node) {
   if ($node->type == variable_get('flickrsync_node_type', '')) {
-    return user_access('update from flickr');
+	 global $user;
+	 return (user_access('update from flickr') && $node->uid == $user->uid) || $user->uid == 1;
   }
   return FALSE;
 }
@@ -379,6 +380,21 @@ function flickrsync_node_save($photo_id, $update_nodes = FALSE) {
     $content .= $flickr_photo['description'];
   }
 
+	$openlayer_field = variable_get('flickrsync_openlayers_cck', '');
+	if ($openlayer_field ){
+		$geo_data = $f->photos_geo_getLocation($photo_id);
+		if (isset ($geo_data['location'])){
+			$node->{$openlayer_field} = array(0 => array('openlayers_wkt' => 'GEOMETRYCOLLECTION(POINT(' . $geo_data['location']['longitude'] . ' ' . $geo_data['location']['latitude'] . '))'));
+		}
+	}
+
+	$prise_vue = variable_get('flickrsync_date', '');
+	if ($prise_vue){
+		$node->{$prise_vue} = array(0 => array('value' =>strtotime($flickr_photo['dates']['taken'])));
+	}else{
+		$node->created = strtotime($flickr_photo['dates']['taken']);
+	}
+
   // image field
   $imagefield = variable_get('flickrsync_image_field', '');
   if ($imagefield) {
@@ -410,6 +426,7 @@ function flickrsync_node_save($photo_id, $update_nodes = FALSE) {
   } else {
     $node->{$textfield}[0]['value'] = $content;
   }
+
 
 	// tags
   $flickr_tags = $flickr_photo['tags']['tag'];
@@ -454,7 +471,7 @@ function flickrsync_node_save($photo_id, $update_nodes = FALSE) {
 
   
   $node->title = $photo_title;
-  $node->created = strtotime($flickr_photo['dates']['taken']);
+  
 	//$node->teaser = $content;
   $node->format = variable_get('filter_default_format', '');
 	//$node->body = $content;
