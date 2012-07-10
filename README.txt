@@ -4,4 +4,3 @@ The Flickr Sync module downloads new photos from Flickr and creates Drupal nodes
 This module does NOT provide any image gallery view or other theming.
 
 This modules requires Flickr API module.
-test git
