@@ -80,7 +80,7 @@ function flickrsync_admin_settings() {
 				'#title' => t('Text field for attaching Geo Data '),
 				'#default_value' => variable_get('flickrsync_openlayers_cck', ''),
 				'#options' => $choices['openlayers_cck'],
-				'#description' => t('Select the taxonomy field to use for attaching Flickr Geo Data to Drupal nodes.'),
+				'#description' => t('Select the OpenLayer field to use for attaching Flickr Geo Data to Drupal nodes.'),
 			);
 		}
 
@@ -90,7 +90,7 @@ function flickrsync_admin_settings() {
 				'#title' => t('Text field for attaching Date '),
 				'#default_value' => variable_get('flickrsync_date', ''),
 				'#options' => $choices['date'],
-				'#description' => t('Select the taxonomy field to use for attaching Flickr date to Drupal nodes.'),
+				'#description' => t('Select the Date(Datestamp) field to use for attaching Flickr date to Drupal nodes.'),
 			);
 		}
     $vocabs = taxonomy_get_vocabularies($type);

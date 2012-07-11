@@ -336,7 +336,7 @@ function flickrsync_node_save($photo_id, $update_nodes = FALSE) {
     $node = new stdClass();
     $newnode = TRUE;
   }
-
+	$cck = content_types(variable_get('flickrsync_node_type', ''));
   $f = flickrapi_phpFlickr();
   if (!$f) {
     drupal_set_message(t("Unable to access Flickr API"), 'error');
@@ -390,7 +390,15 @@ function flickrsync_node_save($photo_id, $update_nodes = FALSE) {
 
 	$prise_vue = variable_get('flickrsync_date', '');
 	if ($prise_vue){
-		$node->{$prise_vue} = array(0 => array('value' =>strtotime($flickr_photo['dates']['taken'])));
+		$type_date_field = $cck['fields'][$prise_vue]['type'];
+		dsm($cck['fields']);
+		if ($type_date_field == 'datestamp'){
+			$date = array(0 => array('value' => strtotime($flickr_photo['dates']['taken'])));
+		}elseif($type_date_field == 'datetime'){
+			$date = array(0 => array('value' => $flickr_photo['dates']['taken']));
+		}
+
+		$node->{$prise_vue} = $date;
 	}else{
 		$node->created = strtotime($flickr_photo['dates']['taken']);
 	}
@@ -398,23 +406,22 @@ function flickrsync_node_save($photo_id, $update_nodes = FALSE) {
   // image field
   $imagefield = variable_get('flickrsync_image_field', '');
   if ($imagefield) {
-    // remove old files if update
-    if (($update_nodes && variable_get('flickrsync_never_update_image', False)) || ! $update_nodes ) {
+    // remove old files if update and 'Never Update Image' not checked
+		$never_update = variable_get('flickrsync_never_update_image', FALSE);
+    if (($update_nodes && ! $never_update) || !$update_nodes) {
       foreach ($node->{$imagefield} as $image_file) {
         $file_delete = field_file_load($image_file['fid']);
         field_file_delete($file_delete);  
       }
+			unset($node->{$imagefield});
+			$file['list'] = $cck['fields'][$imagefield]['list_default'];
+			$file['data']['alt'] = $photo_title;
+			$file['data']['title'] = $cck['fields'][$imagefield]['widget']['title'];
+			$file['data']['description'] = $cck['fields'][$imagefield]['widget']['description'];
+			unset($file['source']);
+			unset($file['destination']);
+			$node->{$imagefield} = array($file);
     }
-    unset($node->{$imagefield});
-    $cck = content_types(variable_get('flickrsync_node_type', ''));
-
-    $file['list'] = $cck['fields'][$imagefield]['list_default'];
-    $file['data']['alt'] = $photo_title;
-    $file['data']['title'] = $cck['fields'][$imagefield]['widget']['title'];
-    $file['data']['description'] = $cck['fields'][$imagefield]['widget']['description'];    
-    unset($file['source']);
-    unset($file['destination']);
-    $node->{$imagefield} = array($file);
   }
   else {
     drupal_set_message(t("Image field not configured in Flickr sync settings"), 'error');
