@@ -116,6 +116,11 @@ function flickrsync_admin_settings() {
         can be imported.");
     }
   }
+  $form['flickrsync_never_update_image'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Never Update Image'),
+		'#default_value' => variable_get('flickrsync_never_update_image', 0),
+  );
   $form['flickrsync_timeout'] = array(
     '#type' => 'textfield',
     '#title' => t('Timeout when importing Flickr images'),

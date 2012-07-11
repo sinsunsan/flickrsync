@@ -383,7 +383,7 @@ function flickrsync_node_save($photo_id, $update_nodes = FALSE) {
 	$openlayer_field = variable_get('flickrsync_openlayers_cck', '');
 	if ($openlayer_field ){
 		$geo_data = $f->photos_geo_getLocation($photo_id);
-		if (isset ($geo_data['location'])){
+		if (isset ($geo_data['location']) && !$update_nodes){
 			$node->{$openlayer_field} = array(0 => array('openlayers_wkt' => 'GEOMETRYCOLLECTION(POINT(' . $geo_data['location']['longitude'] . ' ' . $geo_data['location']['latitude'] . '))'));
 		}
 	}
@@ -394,12 +394,12 @@ function flickrsync_node_save($photo_id, $update_nodes = FALSE) {
 	}else{
 		$node->created = strtotime($flickr_photo['dates']['taken']);
 	}
-
+ 
   // image field
   $imagefield = variable_get('flickrsync_image_field', '');
   if ($imagefield) {
     // remove old files if update
-    if ($update_nodes) {
+    if (($update_nodes && variable_get('flickrsync_never_update_image', False)) || ! $update_nodes ) {
       foreach ($node->{$imagefield} as $image_file) {
         $file_delete = field_file_load($image_file['fid']);
         field_file_delete($file_delete);  
