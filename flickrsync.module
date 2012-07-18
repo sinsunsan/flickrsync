@@ -68,7 +68,8 @@ function flickrsync_perm() {
 function flickrupdate_tab_access($node) {
   if ($node->type == variable_get('flickrsync_node_type', '')) {
 	 global $user;
-	 return (user_access('update from flickr') && $node->uid == $user->uid) || $user->uid == 1;
+	 
+	 return (user_access('update from flickr') && node_content_access('update', $node, $user));
   }
   return FALSE;
 }
@@ -391,7 +392,6 @@ function flickrsync_node_save($photo_id, $update_nodes = FALSE) {
 	$prise_vue = variable_get('flickrsync_date', '');
 	if ($prise_vue){
 		$type_date_field = $cck['fields'][$prise_vue]['type'];
-		dsm($cck['fields']);
 		if ($type_date_field == 'datestamp'){
 			$date = array(0 => array('value' => strtotime($flickr_photo['dates']['taken'])));
 		}elseif($type_date_field == 'datetime'){
