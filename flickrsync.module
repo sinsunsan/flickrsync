@@ -381,7 +381,7 @@ function flickrsync_node_save($photo_id, $update_nodes = FALSE) {
     $content .= $flickr_photo['description'];
   }
 
-	$openlayer_field = variable_get('flickrsync_openlayers_cck', '');
+	$openlayer_field = variable_get('flickrsync_openlayers', '');
 	if ($openlayer_field ){
 		$geo_data = $f->photos_geo_getLocation($photo_id);
 		if (isset ($geo_data['location']) && !$update_nodes){
@@ -409,10 +409,12 @@ function flickrsync_node_save($photo_id, $update_nodes = FALSE) {
     // remove old files if update and 'Never Update Image' not checked
 		$never_update = variable_get('flickrsync_never_update_image', FALSE);
     if (($update_nodes && ! $never_update) || !$update_nodes) {
-      foreach ($node->{$imagefield} as $image_file) {
-        $file_delete = field_file_load($image_file['fid']);
-        field_file_delete($file_delete);  
-      }
+      if ($update_nodes){
+				foreach (@$node->{$imagefield} as $image_file) {
+					$file_delete = field_file_load($image_file['fid']);
+					field_file_delete($file_delete);  
+				}
+			}
 			unset($node->{$imagefield});
 			$file['list'] = $cck['fields'][$imagefield]['list_default'];
 			$file['data']['alt'] = $photo_title;

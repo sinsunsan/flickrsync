@@ -33,11 +33,13 @@ function flickrsync_admin_settings() {
     );
     foreach ($fields as $name => $field) {
       $module = $field['widget']['module'];
-      if (in_array($module, array('imagefield', 'text', 'openlayers_cck', 'date'))) {
+      if (in_array($module, array('imagefield', 'text', 'date'))) {
         $choices[$module][$name] = $field['widget']['label'];
       } elseif (substr($module, 0, 16) == 'content_taxonomy') {
         $choices['content_taxonomy'][$name] = $field['widget']['label'];
-      }			
+      } elseif (substr($module, 0, 10) == 'openlayers') {
+        $choices['openlayers'][$name] = $field['widget']['label'];
+      }
     }
 		
 		if ($choices['imagefield']) {
@@ -74,12 +76,12 @@ function flickrsync_admin_settings() {
 			drupal_set_message("The node type selected doesn't have any taxonomy fields.  Please select a different node type, or add an taxonomy field to this node type.", 'error');
 		}
 
-		if ($choices['openlayers_cck']) {
-			$form['flickrsync_openlayers_cck'] = array(
+		if ($choices['openlayers']) {
+			$form['flickrsync_openlayers'] = array(
 				'#type' => 'select',
-				'#title' => t('Text field for attaching Geo Data '),
-				'#default_value' => variable_get('flickrsync_openlayers_cck', ''),
-				'#options' => $choices['openlayers_cck'],
+				'#title' => t('Openlayer field  for attaching Geo Data'),
+				'#default_value' => variable_get('flickrsync_openlayers', ''),
+				'#options' => $choices['openlayers'],
 				'#description' => t('Select the OpenLayer field to use for attaching Flickr Geo Data to Drupal nodes.'),
 			);
 		}
@@ -87,10 +89,10 @@ function flickrsync_admin_settings() {
 		if ($choices['date']) {
 			$form['flickrsync_date'] = array(
 				'#type' => 'select',
-				'#title' => t('Text field for attaching Date '),
+				'#title' => t('Date field for attaching Flickr date'),
 				'#default_value' => variable_get('flickrsync_date', ''),
 				'#options' => $choices['date'],
-				'#description' => t('Select the Date(Datestamp) field to use for attaching Flickr date to Drupal nodes.'),
+				'#description' => t('Select the Date field to use for attaching Flickr date to Drupal nodes.'),
 			);
 		}
     $vocabs = taxonomy_get_vocabularies($type);
