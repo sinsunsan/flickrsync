@@ -106,7 +106,17 @@ function flickrsync_import_start_page() {
   }
 
   $output[] = '<div id="flickrsync-import">';
-  $output[] = '  <div class="notes">'. $text .'</div>';
+  
+  // Make a header to have quick access to user flickr settings
+  global $user;
+  $options = array(
+    'attributes' => array(
+       'class' => '', // Put additional class to style the button
+    ),
+    'query' => 'destination=admi/flickr/import',
+  );
+  $output[] = l(t('Change flickr settings'), 'user/' . $user->uid . '/edit', $options); 
+  $output[] = '  <div class="notes"><br>'. $text .'<br></div>';
 
   if ($_POST['op']) {
     $_SESSION['flickrsync_init'] = 1;
